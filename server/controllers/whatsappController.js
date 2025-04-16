@@ -1,3 +1,25 @@
+// הגדרת משתנים גלובליים
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode');
+const path = require('path');
+const fs = require('fs');
+
+// משתנים גלובליים לשמירת מידע על לקוחות WhatsApp
+let whatsappClients = {}; // Object to store client instances by userId
+let qrCodes = {}; // QR codes by userId
+let clientStatus = {}; // Ready status by userId
+let processedMessages = new Set(); // מונע עיבוד כפול של הודעות
+
+// פונקציה לקבלת לקוח WhatsApp עבור משתמש ספציפי
+function getClientForUser(userId) {
+  return whatsappClients[userId] || null;
+}
+
+// פונקציה לבדיקה אם לקוח מוכן לשימוש
+function isClientReady(userId) {
+  return clientStatus[userId] === 'READY';
+}
+
 // פונקציה חדשה להתנתקות מ-WhatsApp
 const logoutClient = async (req, res) => {
   try {
@@ -207,11 +229,6 @@ const getStatus = async (req, res) => {
   }
 };
 
-// נשנה את האובייקטים שמנהלים את מצב החיבור כך שישתמשו רק במזהה המשתמש
-const whatsappClients = {}; // userId -> client
-const qrCodes = {}; // userId -> qrCode
-const clientStatus = {}; // userId -> status
-
 // עדכון פונקציית האתחול
 const initializeClient = async (req, res) => {
   try {
@@ -355,6 +372,61 @@ const initializeClient = async (req, res) => {
   } catch (error) {
     console.error('Error in initializeClient:', error);
     return res.status(500).json({ error: 'Failed to initialize WhatsApp client' });
+  }
+};
+
+// פונקציה לשליחת הודעת WhatsApp
+const sendMessage = async (req, res) => {
+  const { userId, to, text } = req.body;
+  
+  if (!userId || !to || !text) {
+    return res.status(400).json({ success: false, error: 'User ID, phone number and message text are required' });
+  }
+  
+  const client = getClientForUser(userId);
+  
+  if (!client) {
+    return res.status(400).json({ success: false, error: 'WhatsApp client is not initialized for this user' });
+  }
+  
+  if (!isClientReady(userId)) {
+    return res.status(400).json({ success: false, error: 'WhatsApp client is not ready yet for this user' });
+  }
+  
+  // פורמט מספר הטלפון
+  let cleanNumber = to.replace(/\D/g, '');
+  
+  // הסר את הספרה 0 מההתחלה אם קיימת
+  if (cleanNumber.startsWith('0')) {
+    cleanNumber = cleanNumber.substring(1);
+  }
+  
+  // וודא שיש קידומת מדינה (ברירת מחדל 972 לישראל)
+  if (!cleanNumber.startsWith('972')) {
+    cleanNumber = '972' + cleanNumber;
+  }
+  
+  // הוסף את הסיומת של WhatsApp
+  const formattedNumber = `${cleanNumber}@c.us`;
+  
+  console.log(`Attempting to send message to ${formattedNumber} from user ${userId}:`, text);
+  
+  try {
+    // שלח את ההודעה
+    const result = await client.sendMessage(formattedNumber, text);
+    console.log(`Message sent successfully from user ${userId}:`, result);
+    
+    return res.json({ 
+      success: true, 
+      message: 'Message sent successfully',
+      result
+    });
+  } catch (error) {
+    console.error(`Error sending WhatsApp message from user ${userId}:`, error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message
+    });
   }
 };
 
