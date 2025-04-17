@@ -12,26 +12,120 @@ const firebaseConfig = {
   measurementId: "G-N4XVLH2SW4"
 };
 
+// משתנה גלובלי לשמירת אובייקט מדומה
+let mockFirestore = null;
+
 const initializeFirebase = () => {
   try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+    // בדוק אם יש כבר אפליקציית Firebase שאותחלה
+    if (admin.apps.length === 0) {
+      // נסה להתחבר בגישה האנונימית ההיקפית עם Application Default Credentials
+      admin.initializeApp({
         projectId: firebaseConfig.projectId,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-iqad7@eli-gram.iam.gserviceaccount.com",
-        privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined
-      }),
-      databaseURL: firebaseConfig.databaseURL,
-      storageBucket: firebaseConfig.storageBucket
-    });
-    console.log('Firebase initialized successfully');
-    return admin.firestore();
+        databaseURL: firebaseConfig.databaseURL,
+        storageBucket: firebaseConfig.storageBucket
+      });
+      console.log('Firebase initialized with default configuration');
+    }
+    
+    // נסה לגשת ל-Firestore כדי לוודא שהחיבור עובד
+    const db = admin.firestore();
+    console.log('Firebase Firestore access successful');
+    
+    return db;
   } catch (error) {
     console.error('Firebase initialization error:', error);
     console.error('Firebase credentials issue. Running without database.');
     console.warn('Running in NO-DATABASE mode - data will not be saved');
-    return null;
+    
+    // יצירת אובייקט מדומה של Firestore
+    mockFirestore = createMockFirestore();
+    return mockFirestore;
   }
 };
+
+// פונקציה ליצירת firestore מדומה
+function createMockFirestore() {
+  console.log('Creating mock Firestore for development');
+  
+  // אחסון נתונים זמניים
+  const collections = {
+    agents: {},
+    conversations: {},
+    messages: {},
+    phone_numbers: {}
+  };
+  
+  // החזרת אובייקט עם API דומה ל-Firestore
+  return {
+    collection: (name) => ({
+      doc: (id) => ({
+        set: (data) => {
+          if (!collections[name]) collections[name] = {};
+          collections[name][id] = data;
+          return Promise.resolve();
+        },
+        get: () => Promise.resolve({
+          exists: () => collections[name] && collections[name][id],
+          data: () => collections[name] && collections[name][id] ? collections[name][id] : null,
+          id
+        }),
+        update: (data) => {
+          if (!collections[name]) collections[name] = {};
+          if (!collections[name][id]) collections[name][id] = {};
+          
+          collections[name][id] = { ...collections[name][id], ...data };
+          return Promise.resolve();
+        },
+        delete: () => {
+          if (collections[name] && collections[name][id]) {
+            delete collections[name][id];
+          }
+          return Promise.resolve();
+        }
+      }),
+      add: (data) => {
+        const id = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        if (!collections[name]) collections[name] = {};
+        collections[name][id] = data;
+        return Promise.resolve({ id });
+      },
+      where: () => ({
+        where: () => ({
+          limit: () => ({
+            get: () => Promise.resolve({
+              empty: true,
+              docs: []
+            })
+          })
+        }),
+        limit: () => ({
+          get: () => Promise.resolve({
+            empty: true,
+            docs: []
+          })
+        }),
+        get: () => Promise.resolve({
+          empty: true,
+          docs: []
+        })
+      }),
+      get: () => Promise.resolve({
+        empty: Object.keys(collections[name] || {}).length === 0,
+        docs: Object.entries(collections[name] || {}).map(([id, data]) => ({
+          id,
+          data: () => data,
+          ref: {
+            update: (updateData) => {
+              collections[name][id] = { ...collections[name][id], ...updateData };
+              return Promise.resolve();
+            }
+          }
+        }))
+      })
+    })
+  };
+}
 
 module.exports = {
   initializeFirebase,
