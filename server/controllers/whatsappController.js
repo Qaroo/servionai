@@ -182,7 +182,10 @@ const handleWebhook = async (req, res) => {
 // פונקציה חדשה לקבלת מצב ה-WhatsApp
 const getStatus = async (req, res) => {
   try {
-    const { userId, phoneId } = req.body;
+    // קריאה של userId מהפרמטרים בנתיב במקום מהגוף של הבקשה
+    const userId = req.params.userId;
+    // אם יש phoneId, נקרא אותו מהבקשה
+    const { phoneId } = req.body || {};
     
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -197,9 +200,13 @@ const getStatus = async (req, res) => {
     
     const client = whatsappClients[clientKey];
     
+    // אם אין לקוח, נחזיר סטטוס מתאים במקום שגיאה
     if (!client) {
-      return res.status(400).json({ 
-        error: 'WhatsApp client not initialized for this user' 
+      return res.json({
+        status: 'NOT_INITIALIZED',
+        ready: false,
+        qrCode: null,
+        clientKey
       });
     }
     
