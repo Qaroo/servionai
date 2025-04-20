@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts - Rubik & Assistant */
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&family=Rubik:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --primary-color: #0ea5e9;
+  --secondary-color: #64748b;
+  --background-light: #ffffff;
+  --background-dark: #1e293b;
+  --text-light: #0f172a;
+  --text-dark: #e2e8f0;
+}
+
+/* RTL */
+html, body {
+  direction: rtl;
+  font-family: 'Assistant', sans-serif;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Rubik', sans-serif;
+}
+
+#root {
+  height: 100%;
+}
+
+/* נגישות - מתג מצב כהה/בהיר */
+.dark {
+  --background-color: var(--background-dark);
+  --text-color: var(--text-dark);
+}
+
+.light {
+  --background-color: var(--background-light);
+  --text-color: var(--text-light);
+}
+
+/* הגדרות מותאמות */
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-secondary-200 text-secondary-800 rounded-md hover:bg-secondary-300 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-secondary-800 rounded-lg shadow-md p-6;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500;
+  }
+
+  /* כניסת צ'אט */
+  .chat-bubble-user {
+    @apply bg-primary-100 dark:bg-primary-900 text-primary-900 dark:text-primary-100 p-3 rounded-lg rounded-tr-none mr-auto;
+  }
+
+  .chat-bubble-ai {
+    @apply bg-secondary-100 dark:bg-secondary-700 text-secondary-900 dark:text-secondary-100 p-3 rounded-lg rounded-tl-none ml-auto;
+  }
+} 
