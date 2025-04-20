@@ -29,11 +29,17 @@ yarn-error.log*
 # runtime data
 /sessions
 /temp
+/server/sessions
+/server/temp
 *.mp3
 *.mp4
 *.wav
 *.zip
 *.rar
+*.ldb
+*.blob
+*Cache_Data*
+*CacheStorage*
 
 # firebase
 firebase-adminsdk.json
@@ -44,3 +50,4 @@ serviceAccountKey.json
 .vscode
 *.swp
 *.swo 
+server/sessions
